@@ -8,20 +8,22 @@ package ch.uprisesoft.butler.controller;
 import ch.uprisesoft.butler.model.Host;
 import ch.uprisesoft.butler.service.ConsulNodeService;
 import ch.uprisesoft.butler.service.NodeService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author rmaire
  */
 @Controller
-@Slf4j
 @RequestMapping("/nodes")
 public class NodeController {
+
+    Logger log = LoggerFactory.getLogger(NodeController.class);
 
     @RequestMapping(value = {"", "/"}, method = RequestMethod.GET)
     public String dashboard(Model model) {

@@ -7,19 +7,8 @@ package ch.uprisesoft.butler.controller;
 
 import ch.uprisesoft.butler.model.Host;
 import ch.uprisesoft.butler.model.OldForm;
-import ch.uprisesoft.butler.service.ConsulNodeService;
-import ch.uprisesoft.butler.service.NodeService;
-import ch.uprisesoft.jconstruct.Command;
-import ch.uprisesoft.jconstruct.OsType;
-import ch.uprisesoft.jconstruct.executor.MemoryOutputObserver;
-import ch.uprisesoft.jconstruct.executor.OutputEntry;
-import ch.uprisesoft.jconstruct.target.Target;
+
 import freemarker.template.Configuration;
-import freemarker.template.Template;
-import freemarker.template.TemplateException;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,25 +18,24 @@ import java.util.Map;
 import java.util.Map.Entry;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.util.ResourceUtils;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
-@Slf4j
 public class HelloController {
 
-    //Logger logger = LoggerFactory.getLogger(HelloController.class);
+    Logger log = LoggerFactory.getLogger(HelloController.class);
+
     @Autowired
     Configuration cfg;
 

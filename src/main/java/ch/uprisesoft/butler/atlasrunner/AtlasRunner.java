@@ -8,15 +8,15 @@ package ch.uprisesoft.butler.atlasrunner;
 import ch.uprisesoft.butler.plugin.api.Observer;
 import ch.uprisesoft.butler.plugin.api.Runner;
 import ch.uprisesoft.butler.plugin.api.model.values.Value;
-import ch.uprisesoft.jconstruct.executor.OutputEntry;
-import ch.uprisesoft.jconstruct.executor.OutputObserver;
+//import ch.uprisesoft.jconstruct.executor.OutputEntry;
+//import ch.uprisesoft.jconstruct.executor.OutputObserver;
 import java.util.List;
 
 /**
  *
  * @author rmaire
  */
-public class AtlasRunner implements Runner, OutputObserver {
+public class AtlasRunner implements Runner {
 
     @Override
     public void setInputs(List<Value> inputs) {
@@ -48,9 +48,9 @@ public class AtlasRunner implements Runner, OutputObserver {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-    @Override
+ /*   @Override
     public void inform(OutputEntry entry) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
+    }*/
     
 }

@@ -7,11 +7,6 @@ package ch.uprisesoft.butler.controller;
 
 import ch.uprisesoft.butler.model.Template;
 import ch.uprisesoft.butler.service.TemplateService;
-import ch.uprisesoft.jconstruct.Command;
-import ch.uprisesoft.jconstruct.OsType;
-import ch.uprisesoft.jconstruct.executor.MemoryOutputObserver;
-import ch.uprisesoft.jconstruct.executor.OutputEntry;
-import ch.uprisesoft.jconstruct.target.Target;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -22,11 +17,12 @@ import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.util.ResourceUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,9 +33,10 @@ import org.springframework.web.servlet.ModelAndView;
  * @author rmaire
  */
 @Controller
-@Slf4j
 @RequestMapping("/projects")
 public class ProjectsController {
+
+    Logger log = LoggerFactory.getLogger(ProjectsController.class);
 
     @Autowired
     TemplateService ts;
@@ -87,7 +84,7 @@ public class ProjectsController {
         log.debug("Realized template:");
         log.debug(out.toString());
 
-        Target target = null;
+        /*Target target = null;
         try {
             target = new Target.Builder()
                     .withHost("116.203.213.234")
@@ -116,7 +113,7 @@ public class ProjectsController {
         }
         for(OutputEntry oe: o.getEntries()) {
             log.debug(oe.getEntry());
-        }
+        }*/
 
         log.debug("================= Run Command =================");
         return "redirect:/projects";

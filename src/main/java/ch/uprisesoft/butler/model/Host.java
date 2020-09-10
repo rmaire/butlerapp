@@ -1,6 +1,5 @@
 package ch.uprisesoft.butler.model;
 
-import ch.uprisesoft.jconstruct.target.Target;
 
 public class Host {
 
@@ -30,13 +29,13 @@ public class Host {
         return leader;
     }
 
-    public Target getTarget() {
+ /*   public Target getTarget() {
         return new Target.Builder()
                 .withHost(ip)
                 .withUsername(user)
                 .withKey(key)
                 .build();
-    }
+    }*/
 
     @Override
     public String toString() {

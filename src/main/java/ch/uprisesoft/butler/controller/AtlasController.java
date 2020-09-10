@@ -6,15 +6,13 @@
 package ch.uprisesoft.butler.controller;
 
 import ch.uprisesoft.butler.plugin.api.model.values.Value;
-import ch.uprisesoft.butler.atlasrunner.AtlasRunnerPlugin;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -24,9 +22,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
  * @author rmaire
  */
 @Controller
-@Slf4j
 @RequestMapping("/atlas")
 public class AtlasController {
+
+    Logger log = LoggerFactory.getLogger(AtlasController.class);
 
     @RequestMapping(value = {"", "/"}, method = RequestMethod.GET)
     public String dashboard(Model model) {
