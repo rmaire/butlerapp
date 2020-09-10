@@ -5,7 +5,7 @@
  */
 package ch.uprisesoft.butler.model.helper;
 
-import ch.uprisesoft.butler.api.model.values.Value;
+import ch.uprisesoft.butler.plugin.api.model.values.Value;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import java.io.IOException;

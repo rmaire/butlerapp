@@ -5,7 +5,7 @@
  */
 package ch.uprisesoft.butler.controller;
 
-import ch.uprisesoft.butler.api.model.values.Value;
+import ch.uprisesoft.butler.plugin.api.model.values.Value;
 import ch.uprisesoft.butler.atlasrunner.AtlasRunnerPlugin;
 import java.util.ArrayList;
 import java.util.HashMap;

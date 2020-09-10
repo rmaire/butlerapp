@@ -5,7 +5,7 @@
  */
 package ch.uprisesoft.butler.model;
 
-import ch.uprisesoft.butler.api.model.values.Value;
+import ch.uprisesoft.butler.plugin.api.model.values.Value;
 import java.util.ArrayList;
 import java.util.List;
 

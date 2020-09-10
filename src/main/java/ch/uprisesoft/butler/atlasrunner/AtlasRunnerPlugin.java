@@ -5,9 +5,9 @@
  */
 package ch.uprisesoft.butler.atlasrunner;
 
-import ch.uprisesoft.butler.api.Runner;
-import ch.uprisesoft.butler.api.RunnerFactory;
-import ch.uprisesoft.butler.api.Schema;
+import ch.uprisesoft.butler.plugin.api.Runner;
+import ch.uprisesoft.butler.plugin.api.RunnerFactory;
+import ch.uprisesoft.butler.plugin.api.Schema;
 import org.pf4j.Extension;
 import org.pf4j.Plugin;
 import org.pf4j.PluginWrapper;

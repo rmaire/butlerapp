@@ -5,9 +5,9 @@
  */
 package ch.uprisesoft.butler.atlasrunner;
 
-import ch.uprisesoft.butler.api.Observer;
-import ch.uprisesoft.butler.api.Runner;
-import ch.uprisesoft.butler.api.model.values.Value;
+import ch.uprisesoft.butler.plugin.api.Observer;
+import ch.uprisesoft.butler.plugin.api.Runner;
+import ch.uprisesoft.butler.plugin.api.model.values.Value;
 import ch.uprisesoft.jconstruct.executor.OutputEntry;
 import ch.uprisesoft.jconstruct.executor.OutputObserver;
 import java.util.List;

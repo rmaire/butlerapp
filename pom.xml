@@ -177,11 +177,11 @@
             <version>0.27.0</version>
         </dependency>
         
-        <dependency>
+<!--        <dependency>
             <groupId>ch.uprisesoft.butler</groupId>
             <artifactId>butler-plugin-api</artifactId>
             <version>0.1.1</version>
-        </dependency>
+        </dependency>-->
         
         <!-- dependency>
                 <groupId>org.flywaydb</groupId>

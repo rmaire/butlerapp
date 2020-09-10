@@ -5,7 +5,6 @@
  */
 package ch.uprisesoft.butler.controller;
 
-import ch.uprisesoft.butler.api.model.values.Value;
 import ch.uprisesoft.butler.model.Form;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,12 +27,12 @@ public class FormsController {
     public List<Form> getForms(HttpServletRequest request, HttpServletResponse response) {
         List<Form> forms = new ArrayList<>();
 
-        Form testForm = new Form();
-        testForm.addElement(Value.of("Test Field 1", "Test Value 1"));
-        testForm.addElement(Value.of("Test Field 2", ""));
-        testForm.addElement(Value.of("Test Field 3", 22));
-        
-        forms.add(testForm);
+//        Form testForm = new Form();
+//        testForm.addElement(Value.of("Test Field 1", "Test Value 1"));
+//        testForm.addElement(Value.of("Test Field 2", ""));
+//        testForm.addElement(Value.of("Test Field 3", 22));
+//        
+//        forms.add(testForm);
         return forms;
     }
     

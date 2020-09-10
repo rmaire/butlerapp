@@ -5,9 +5,9 @@
  */
 package ch.uprisesoft.butler.controller;
 
-import ch.uprisesoft.butler.api.Schema;
 import ch.uprisesoft.butler.atlasrunner.AtlasRunnerPlugin;
 import ch.uprisesoft.butler.atlasrunner.AtlasRunnerPlugin.AtlasRunnerFactory;
+import ch.uprisesoft.butler.plugin.api.Schema;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
