@@ -1,0 +1,490 @@
+#!/bin/bash
+
+usage () {
+    echo "usage: atlasbundle [-f config-file-name] [-b bundle-name] [-d db-name] [-p password] [-j jira-name:version ] [-c confluence-name:version] [-jira2 name:version] [-confluence2 name:version] [-h] <command>"
+    echo "   ";
+    echo "  -b | --bundle-name      : Name of the whole bundle";
+    echo "  -d | --db-name          : Name and Hostname of the database";
+    echo "  -p | --db-password      : Password for the database and all instance accounts";
+    echo "  -j | --jira             : Name and version of the first Jira instance";
+    echo "  -c | --confluence       : Name and version of the first Confluence instance";
+    echo "  --jira-ram              : Sets an optional amount of xmx for the first Jira instance. Default is 3096m"
+    echo "  --confluence-ram        : Sets an optional amount of xmx for the first Confluence instance. Default is 3096m"
+    echo "  --jira2                 : Name and version of the second Jira instance";
+    echo "  --confluence2           : Name and version of the second Confluence instance";
+    echo "  --jira2-ram             : Sets an optional amount of xmx for the second Jira instance. Default is 3096m"
+    echo "  --confluence2-ram       : Sets an optional amount of xmx for the second Confluence instance. Default is 3096m"
+    echo "  -h | --help             : This message";
+    echo "  -f | --file             : Reads the file as configuration";
+    echo "  -n | --cluster-Name     : Domain name of the cluster, e.g. mydomain.org"
+    echo "   ";
+    echo "  command                 : One of the following commands";
+    echo "      create              : Creates a private Docker network and all configured containers";
+    echo "      stop                : Stops all configured containers";
+    echo "      start               : Starts all configured containers";
+    echo "      remove              : Removes all configured containers and the network";
+}
+
+args=()
+
+while [ "$1" != "" ]
+do
+    case "$1" in
+        -f|--file)
+        FILE="$2"
+        shift
+        shift
+        ;;
+        -b|--bundle-name)
+        BUNDLE_NAME="$2"
+        shift
+        shift
+        ;;
+        -d|--db-name)
+        DB_HOSTNAME="$2"
+        shift
+        shift
+        ;;
+        -p|--db-password)
+        DB_PW="$2"
+        shift
+        shift
+        ;;
+        -j|--jira)
+        JIRA_1_HOSTNAME="$(cut -d':' -f1 <<<"$2")"
+        JIRA_1_VERSION="$(cut -d':' -f2 <<<"$2")"
+        shift
+        shift
+        ;;
+        -c|--confluence)
+        CONFLUENCE_1_HOSTNAME="$(cut -d':' -f1 <<<"$2")"
+        CONFLUENCE_1_VERSION="$(cut -d':' -f2 <<<"$2")"
+        shift
+        shift
+        ;;
+        -n|--cluster-name)
+        CLUSTER_DOMAIN="$2"
+        shift
+        shift
+        ;;
+        --jira-ram)
+        JIRA_1_XMX="$2"
+        shift
+        shift
+        ;;
+        --confluence-ram)
+        CONFLUENCE_1_XMX="$2"
+        shift
+        shift
+        ;;
+        --jira2-ram)
+        JIRA_2_XMX="$2"
+        shift
+        shift
+        ;;
+        --confluence2-ram)
+        CONFLUENCE_2_XMX="$2"
+        shift
+        shift
+        ;;
+        --jira2)
+        JIRA_2_HOSTNAME="$(cut -d':' -f1 <<<"$2")"
+        JIRA_2_VERSION="$(cut -d':' -f2 <<<"$2")"
+        shift
+        shift
+        ;;
+        --confluence2)
+        CONFLUENCE_2_HOSTNAME="$(cut -d':' -f1 <<<"$2")"
+        CONFLUENCE_2_VERSION="$(cut -d':' -f2 <<<"$2")"
+        shift
+        shift
+        ;;
+        --bitbucket)
+        BITBUCKET_HOSTNAME="$(cut -d':' -f1 <<<"$2")"
+        BITBUCKET_VERSION="$(cut -d':' -f2 <<<"$2")"
+        shift
+        shift
+        ;;
+        --bamboo)
+        BAMBOO_HOSTNAME="$(cut -d':' -f1 <<<"$2")"
+        BAMBOO_VERSION="$(cut -d':' -f2 <<<"$2")"
+        shift
+        shift
+        ;;
+        --bitbucket-ram)
+        BITBUCKET_XMX="$2"
+        shift
+        shift
+        ;;
+        --bamboo-ram)
+        BAMBOO_XMX="$2"
+        shift
+        shift
+        ;;
+        -h|--help)
+        usage
+        exit
+        ;;
+        *)
+        args+=("$1")
+        shift
+        ;;
+    esac
+done
+
+set -- "${args[@]}"
+
+if [[ -n "$FILE" ]]; then
+    source "$FILE";
+fi
+
+COMMAND="${args[0]}"
+
+if [[ -z "${COMMAND}" ]]; then
+    echo "Missing command"
+    echo "    "
+    usage
+    exit;
+fi
+
+if [[ -z "${JIRA_1_XMX}" ]]; then
+    JIRA_1_XMX='3072m'
+fi
+
+if [[ -z "${CONFLUENCE_1_XMX}" ]]; then
+    CONFLUENCE_1_XMX='3072m'
+fi
+
+if [[ -z "${JIRA_2_XMX}" ]]; then
+    JIRA_2_XMX='3072m'
+fi
+
+if [[ -z "${CONFLUENCE_2_XMX}" ]]; then
+    CONFLUENCE_2_XMX='3072m'
+fi
+
+if [[ -z "${BITBUCKET_XMX}" ]]; then
+    BITBUCKET_XMX='2048m'
+fi
+
+if [[ -z "${BAMBOO_XMX}" ]]; then
+    BAMBOO_XMX='2048m'
+fi
+
+create_bundle () {
+    docker network create --driver bridge $BUNDLE_NAME
+
+    if [ -n "${DB_HOSTNAME}" ]; then
+        docker run -d -p 5432 \
+        -e POSTGRES_PASSWORD=$DB_PW \
+        -e "SERVICE_TAGS=postgres,$BUNDLE_NAME" \
+        -e SERVICE_NAME=$DB_HOSTNAME \
+        --restart always \
+        --hostname $DB_HOSTNAME \
+        --name $DB_HOSTNAME postgres:9.5.19
+
+        docker network connect $BUNDLE_NAME $DB_HOSTNAME
+
+        sleep 5
+
+        if [ -n "${CONFLUENCE_1_HOSTNAME}" ]; then
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE USER $CONFLUENCE_1_HOSTNAME PASSWORD '$DB_PW'"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE DATABASE $CONFLUENCE_1_HOSTNAME WITH ENCODING='UTF8' OWNER=$CONFLUENCE_1_HOSTNAME CONNECTION LIMIT=-1"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $CONFLUENCE_1_HOSTNAME TO $CONFLUENCE_1_HOSTNAME"
+        fi
+
+        if [ -n "${CONFLUENCE_2_HOSTNAME}" ]; then
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE USER $CONFLUENCE_2_HOSTNAME PASSWORD '$DB_PW'"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE DATABASE $CONFLUENCE_2_HOSTNAME WITH ENCODING='UTF8' OWNER=$CONFLUENCE_2_HOSTNAME CONNECTION LIMIT=-1"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $CONFLUENCE_2_HOSTNAME TO $CONFLUENCE_2_HOSTNAME"
+        fi
+
+        if [ -n "${JIRA_1_HOSTNAME}" ]; then
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE USER $JIRA_1_HOSTNAME PASSWORD '$DB_PW'"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE DATABASE $JIRA_1_HOSTNAME WITH ENCODING 'UNICODE' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $JIRA_1_HOSTNAME TO $JIRA_1_HOSTNAME"
+        fi
+
+        if [ -n "${JIRA_2_HOSTNAME}" ]; then
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE USER $JIRA_2_HOSTNAME PASSWORD '$DB_PW'"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE DATABASE $JIRA_2_HOSTNAME WITH ENCODING 'UNICODE' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $JIRA_2_HOSTNAME TO $JIRA_1_HOSTNAME"
+        fi
+
+        if [ -n "${BITBUCKET_HOSTNAME}" ]; then
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE ROLE $BITBUCKET_HOSTNAME WITH LOGIN PASSWORD '$DB_PW' VALID UNTIL 'infinity'"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE DATABASE $BITBUCKET_HOSTNAME WITH ENCODING 'UTF8' OWNER=$BITBUCKET_HOSTNAME CONNECTION LIMIT=-1"
+        fi
+
+        if [ -n "${BAMBOO_HOSTNAME}" ]; then
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE USER $BAMBOO_HOSTNAME PASSWORD '$DB_PW'"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "CREATE DATABASE $BAMBOO_HOSTNAME WITH ENCODING='UTF8' OWNER=$BAMBOO_HOSTNAME CONNECTION LIMIT=-1"
+            docker run -it --rm --network $BUNDLE_NAME -e PGPASSWORD=$DB_PW postgres:9.5.19  psql -w -h $DB_HOSTNAME -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $BAMBOO_HOSTNAME TO $BAMBOO_HOSTNAME"
+        fi
+    fi
+
+    if [ -n "${CONFLUENCE_1_HOSTNAME}" ]; then
+        docker run -d -p 8090 \
+        -e "SERVICE_TAGS=atlassian,confluence,$BUNDLE_NAME,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true" \
+        -e SERVICE_NAME=$CONFLUENCE_1_HOSTNAME \
+        -e X_PROXY_NAME="$CONFLUENCE_1_HOSTNAME.$CLUSTER_DOMAIN" \
+        -e X_PROXY_PORT='443' \
+        -e X_PROXY_SCHEME='https' \
+        -e X_MINIMUM_MEMORY='1024m' \
+        -e X_MAXIMUM_MEMORY=$JIRA_1_XMX \
+        --restart always \
+        --hostname $CONFLUENCE_1_HOSTNAME \
+        --name $CONFLUENCE_1_HOSTNAME zuara/confluence:$CONFLUENCE_1_VERSION
+
+        docker network connect $BUNDLE_NAME $CONFLUENCE_1_HOSTNAME
+    fi
+
+    if [ -n "${CONFLUENCE_2_HOSTNAME}" ]; then
+        docker run -d -p 8090 \
+        -e "SERVICE_TAGS=atlassian,confluence,$BUNDLE_NAME,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true" \
+        -e SERVICE_NAME=$CONFLUENCE_2_HOSTNAME \
+        -e X_PROXY_NAME="$CONFLUENCE_2_HOSTNAME.$CLUSTER_DOMAIN" \
+        -e X_PROXY_PORT='443' \
+        -e X_PROXY_SCHEME='https' \
+        -e X_MINIMUM_MEMORY='1024m' \
+        -e X_MAXIMUM_MEMORY=$CONFLUENCE_2_XMX \
+        --restart always \
+        --hostname $CONFLUENCE_2_HOSTNAME \
+        --name $CONFLUENCE_2_HOSTNAME zuara/confluence:$CONFLUENCE_2_VERSION
+
+        docker network connect $BUNDLE_NAME $CONFLUENCE_2_HOSTNAME
+    fi
+
+    if [ -n "${JIRA_1_HOSTNAME}" ]; then
+        docker run -d -p 8080 \
+        -e "SERVICE_TAGS=atlassian,jira,$BUNDLE_NAME,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true" \
+        -e SERVICE_NAME=$JIRA_1_HOSTNAME \
+        -e X_PROXY_NAME="$JIRA_1_HOSTNAME.$CLUSTER_DOMAIN" \
+        -e X_PROXY_PORT='443' \
+        -e X_PROXY_SCHEME='https' \
+        -e X_MINIMUM_MEMORY='1024m' \
+        -e X_MAXIMUM_MEMORY=$JIRA_1_XMX \
+        --restart always \
+        --hostname $JIRA_1_HOSTNAME \
+        --name $JIRA_1_HOSTNAME zuara/jira:$JIRA_1_VERSION
+
+        docker network connect $BUNDLE_NAME $JIRA_1_HOSTNAME
+    fi
+
+    if [ -n "${JIRA_2_HOSTNAME}" ]; then
+        docker run -d -p 8080 \
+        -e "SERVICE_TAGS=atlassian,jira,$BUNDLE_NAME,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true" \
+        -e SERVICE_NAME=$JIRA_2_HOSTNAME \
+        -e X_PROXY_NAME="$JIRA_2_HOSTNAME.$CLUSTER_DOMAIN" \
+        -e X_PROXY_PORT='443' \
+        -e X_PROXY_SCHEME='https' \
+        -e X_MINIMUM_MEMORY='1024m' \
+        -e X_MAXIMUM_MEMORY=$JIRA_2_XMX \
+        --restart always \
+        --hostname $JIRA_2_HOSTNAME \
+        --name $JIRA_2_HOSTNAME zuara/jira:$JIRA_2_VERSION
+
+        docker network connect $BUNDLE_NAME $JIRA_2_HOSTNAME
+    fi
+
+    if [ -n "${BITBUCKET_HOSTNAME}" ]; then
+        docker run -d -p 7990 \
+        -e "SERVICE_TAGS=atlassian,bitbucket,$BUNDLE_NAME,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true" \
+        -e SERVICE_NAME=$BITBUCKET_HOSTNAME \
+        -e X_PROXY_NAME="$BITBUCKET_HOSTNAME.$CLUSTER_DOMAIN" \
+        -e X_PROXY_PORT='443' \
+        -e X_PROXY_SCHEME='https' \
+        -e X_MINIMUM_MEMORY='1024m' \
+        -e X_MAXIMUM_MEMORY=$BITBUCKET_XMX \
+        --restart always \
+        --hostname $BITBUCKET_HOSTNAME \
+        --name $BITBUCKET_HOSTNAME zuara/bitbucket:$BITBUCKET_VERSION
+
+        docker network connect $BUNDLE_NAME $BITBUCKET_HOSTNAME
+    fi
+
+    if [ -n "${BAMBOO_HOSTNAME}" ]; then
+        docker run -d -p 8085 \
+        -e "SERVICE_TAGS=atlassian,bamboo,$BUNDLE_NAME,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true" \
+        -e SERVICE_NAME=$BAMBOO_HOSTNAME \
+        -e X_PROXY_NAME="$BAMBOO_HOSTNAME.$CLUSTER_DOMAIN" \
+        -e X_PROXY_PORT='443' \
+        -e X_PROXY_SCHEME='https' \
+        -e X_MINIMUM_MEMORY='1024m' \
+        -e X_MAXIMUM_MEMORY=$BAMBOO_XMX \
+        --restart always \
+        --hostname $BAMBOO_HOSTNAME \
+        --name $BAMBOO_HOSTNAME zuara/bamboo:$BAMBOO_VERSION
+
+        docker network connect $BUNDLE_NAME $BAMBOO_HOSTNAME
+    fi
+}
+
+stop_bundle() {
+    if [ -n "${CONFLUENCE_1_HOSTNAME}" ]; then
+        docker stop --time=300 $CONFLUENCE_1_HOSTNAME
+    fi
+    if [ -n "${CONFLUENCE_2_HOSTNAME}" ]; then
+        docker stop --time=300 $CONFLUENCE_2_HOSTNAME
+    fi
+    if [ -n "${JIRA_1_HOSTNAME}" ]; then
+        docker stop --time=300 $JIRA_1_HOSTNAME
+    fi
+    if [ -n "${JIRA_2_HOSTNAME}" ]; then
+        docker stop --time=300 $JIRA_2_HOSTNAME
+    fi
+    if [ -n "${BITBUCKET_HOSTNAME}" ]; then
+        docker stop --time=300 $BITBUCKET_HOSTNAME
+    fi
+    if [ -n "${BAMBOO_HOSTNAME}" ]; then
+        docker stop --time=300 $BAMBOO_HOSTNAME
+    fi
+    if [ -n "${DB_HOSTNAME}" ]; then
+        docker stop --time=300 $DB_HOSTNAME
+    fi
+}
+
+start_bundle() {
+    if [ -n "${DB_HOSTNAME}" ]; then
+        docker start $DB_HOSTNAME
+        sleep 5
+    fi
+    if [ -n "${BITBUCKET_HOSTNAME}" ]; then
+        docker start $BITBUCKET_HOSTNAME
+    fi
+    if [ -n "${BAMBOO_HOSTNAME}" ]; then
+        docker start $BAMBOO_HOSTNAME
+    fi
+    if [ -n "${CONFLUENCE_1_HOSTNAME}" ]; then
+        docker start $CONFLUENCE_1_HOSTNAME
+    fi
+    if [ -n "${CONFLUENCE_2_HOSTNAME}" ]; then
+        docker start $CONFLUENCE_2_HOSTNAME
+    fi
+    if [ -n "${JIRA_1_HOSTNAME}" ]; then
+        docker start $JIRA_1_HOSTNAME
+    fi
+    if [ -n "${JIRA_2_HOSTNAME}" ]; then
+        docker start $JIRA_2_HOSTNAME
+    fi
+}
+
+remove_bundle() {
+    if [ -n "${BITBUCKET_HOSTNAME}" ]; then
+        docker rm --force $BITBUCKET_HOSTNAME
+    fi
+    if [ -n "${BAMBOO_HOSTNAME}" ]; then
+        docker rm --force $BAMBOO_HOSTNAME
+    fi
+    if [ -n "${CONFLUENCE_1_HOSTNAME}" ]; then
+        docker rm --force $CONFLUENCE_1_HOSTNAME
+    fi
+    if [ -n "${CONFLUENCE_2_HOSTNAME}" ]; then
+        docker rm --force $CONFLUENCE_2_HOSTNAME
+    fi
+    if [ -n "${JIRA_1_HOSTNAME}" ]; then
+        docker rm --force $JIRA_1_HOSTNAME
+    fi
+    if [ -n "${JIRA_2_HOSTNAME}" ]; then
+        docker rm --force $JIRA_2_HOSTNAME
+    fi
+    if [ -n "${DB_HOSTNAME}" ]; then
+        docker rm --force $DB_HOSTNAME
+    fi
+    docker network rm $BUNDLE_NAME
+}
+
+restore_bundle() {
+    create_bundle
+    sleep 5
+
+    if [ -n "${DB_HOSTNAME}" ]; then
+        docker stop --time=300 $DB_HOSTNAME
+        docker run --rm --volumes-from ${DB_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/lib/postgresql/data/ && tar xvf /backup/${DB_HOSTNAME}-db.tar ."
+        docker start $DB_HOSTNAME
+        sleep 5
+    fi
+
+    if [ -n "${CONFLUENCE_1_HOSTNAME}" ]; then
+        docker stop --time=300 $CONFLUENCE_1_HOSTNAME
+        docker run --rm --volumes-from ${CONFLUENCE_1_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/confluence/ && tar xvf /backup/${CONFLUENCE_1_HOSTNAME}-data.tar ."
+        docker start $CONFLUENCE_1_HOSTNAME
+    fi
+    if [ -n "${CONFLUENCE_2_HOSTNAME}" ]; then
+        docker stop --time=300 $CONFLUENCE_2_HOSTNAME
+        docker run --rm --volumes-from ${CONFLUENCE_2_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/confluence/ && tar xvf /backup/${CONFLUENCE_2_HOSTNAME}-data.tar ."
+        docker start $CONFLUENCE_2_HOSTNAME
+    fi
+    if [ -n "${JIRA_1_HOSTNAME}" ]; then
+        docker stop --time=300 $JIRA_1_HOSTNAME
+        docker run --rm --volumes-from ${JIRA_1_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/jira/ && tar xvf /backup/${JIRA_1_HOSTNAME}-data.tar ."
+        docker start $JIRA_1_HOSTNAME
+    fi
+    if [ -n "${JIRA_2_HOSTNAME}" ]; then
+        docker stop --time=300 $JIRA_2_HOSTNAME
+        docker run --rm --volumes-from ${JIRA_2_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/jira/ && tar xvf /backup/${JIRA_2_HOSTNAME}-data.tar ."
+        docker start $JIRA_2_HOSTNAME
+    fi
+    if [ -n "${BITBUCKET_HOSTNAME}" ]; then
+        docker stop --time=300 $BITBUCKET_HOSTNAME
+        docker run --rm --volumes-from ${BITBUCKET_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/bitbucket/ && tar xvf /backup/${BITBUCKET_HOSTNAME}-data.tar ."
+        docker start $JIRA_2_HOSTNAME
+    fi
+    if [ -n "${BAMBOO_HOSTNAME}" ]; then
+        docker stop --time=300 $BAMBOO_HOSTNAME
+        docker run --rm --volumes-from ${BAMBOO_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/bamboo/ && tar xvf /backup/${BAMBOO_HOSTNAME}-data.tar ."
+        docker start $BAMBOO_HOSTNAME
+    fi
+}
+
+backup_bundle() {
+    if [ -n "${DB_HOSTNAME}" ]; then
+        docker run --rm --volumes-from ${DB_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/lib/postgresql/data/ && tar cvf /backup/${DB_HOSTNAME}-db.tar ."
+    fi
+
+    sleep 5
+
+    if [ -n "${BITBUCKET_HOSTNAME}" ]; then
+        docker run --rm --volumes-from ${BITBUCKET_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/bitbucket/ && tar cvf /backup/${BITBUCKET_HOSTNAME}-data.tar ."
+    fi
+    if [ -n "${BAMBOO_HOSTNAME}" ]; then
+        docker run --rm --volumes-from ${BAMBOO_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/bamboo/ && tar cvf /backup/${BAMBOO_HOSTNAME}-data.tar ."
+    fi
+
+    if [ -n "${CONFLUENCE_1_HOSTNAME}" ]; then
+        docker run --rm --volumes-from ${CONFLUENCE_1_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/confluence/ && tar cvf /backup/${CONFLUENCE_1_HOSTNAME}-data.tar ."
+    fi
+    if [ -n "${CONFLUENCE_2_HOSTNAME}" ]; then
+        docker run --rm --volumes-from ${CONFLUENCE_2_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/confluence/ && tar cvf /backup/${CONFLUENCE_2_HOSTNAME}-data.tar ."
+    fi
+    if [ -n "${JIRA_1_HOSTNAME}" ]; then
+        docker run --rm --volumes-from ${JIRA_1_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/jira/ && tar cvf /backup/${JIRA_1_HOSTNAME}-data.tar ."
+    fi
+    if [ -n "${JIRA_2_HOSTNAME}" ]; then
+        docker run --rm --volumes-from ${JIRA_2_HOSTNAME} -v /home/administrator/backup:/backup ubuntu bash -c "cd /var/atlassian/jira/ && tar cvf /backup/${JIRA_2_HOSTNAME}-data.tar ."
+    fi
+}
+
+case $COMMAND in
+     start)
+          start_bundle
+          ;;
+     stop)
+          stop_bundle
+          ;;
+     remove)
+          remove_bundle
+          ;;
+     create)
+          create_bundle
+          ;;
+    restore)
+       restore_bundle
+       ;;
+   backup)
+      backup_bundle
+      ;;
+     *)
+          echo "Invalid command: $COMMAND"
+          ;;
+esac

@@ -1,0 +1,201 @@
+{
+  "Datacenters": [
+    "dc1"
+  ],
+  "ID": "testnet3",
+  "Name": "testnet3",
+  "TaskGroups": [
+    {
+      "Count": 1,
+      "Name": "testnetgrp",
+      "Tasks": [
+        {
+          "Config": {
+            "image": "zuara/jira:8.5.1",
+            "hostname": "test02j",
+            "network_mode": "bridge",
+            "port_map": [
+              {
+                "atlasport": 8080
+              }
+            ],
+            "volumes": [
+              "/var/glusterclient/testnet3/test02j:/var/atlassian/jira"
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "X_PROXY_NAME": "test02j.uprisesoft.ch",
+            "X_PROXY_PORT": "443",
+            "X_PROXY_SCHEME": "https",
+            "X_MINIMUM_MEMORY": "1024m",
+            "X_MAXIMUM_MEMORY": "2048m",
+            "SERVICE_TAGS": "jira,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true",
+            "SERVICE_NAME": "test02j"
+          },
+          "Name": "test02j",
+          "Resources": {
+            "CPU": 1000,
+            "MemoryMB": 3072,
+            "Networks": [
+              {
+                "DynamicPorts": [
+                  {
+                    "Label": "atlasport"
+                  }
+                ]
+              }
+            ]
+          },
+          "Services": [
+            {
+              "AddressMode": "auto",
+              "Name": "test02j",
+              "PortLabel": "atlasport",
+              "Tags": [
+                "jira",
+                "traefik.enable=true",
+                "traefik.frontend.entryPoints=https",
+                "traefik.frontend.passHostHeader=true"
+              ]
+            }
+          ]
+        },
+        {
+          "Config": {
+            "image": "zuara/confluence:7.1.0",
+            "hostname": "test02c",
+            "network_mode": "bridge",
+            "port_map": [
+              {
+                "atlasport": 8090
+              }
+            ],
+            "volumes": [
+              "/var/glusterclient/testnet3/test02c:/var/atlassian/jira"
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "X_PROXY_NAME": "test02c.uprisesoft.ch",
+            "X_PROXY_PORT": "443",
+            "X_PROXY_SCHEME": "https",
+            "X_MINIMUM_MEMORY": "1024m",
+            "X_MAXIMUM_MEMORY": "2048m",
+            "SERVICE_TAGS": "confluence,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true",
+            "SERVICE_NAME": "test02c"
+          },
+          "Name": "test02c",
+          "Resources": {
+            "CPU": 1000,
+            "MemoryMB": 3072,
+            "Networks": [
+              {
+                "DynamicPorts": [
+                  {
+                    "Label": "atlasport"
+                  }
+                ]
+              }
+            ]
+          },
+          "Services": [
+            {
+              "AddressMode": "auto",
+              "Name": "test02c",
+              "PortLabel": "atlasport",
+              "Tags": [
+                "confluence",
+                "traefik.enable=true",
+                "traefik.frontend.entryPoints=https",
+                "traefik.frontend.passHostHeader=true"
+              ]
+            }
+          ]
+        },
+        {
+          "Config": {
+            "image": "postgres:9.5.19",
+            "hostname": "testdb",
+            "network_mode": "bridge",
+            "volumes": [
+              "/var/glusterclient/testnet3/testdb:/var/lib/postgresql/data"
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "SERVICE_NAME": "testdb",
+            "POSTGRES_PASSWORD": "nimda",
+            "SERVICE_TAGS": "postgres"
+          },
+          "Name": "testdb",
+          "Resources": {
+            "CPU": 500,
+            "MemoryMB": 512
+          }
+        },
+        {
+          "Config": {
+            "command": "java",
+            "args": ["-jar", "/usr/local/bin/butler.jar", "--setup"]
+          },
+          "Driver": "raw_exec",
+          "Env": {
+            "BUNDLE_NAME": "testnet3",
+            "JIRA_1_HOSTNAME": "test02j",
+            "JIRA_1_CONTAINER": "test02j-${NOMAD_ALLOC_ID}",
+            "CONFLUENCE_2_HOSTNAME": "test02c",
+            "CONFLUENCE_2_CONTAINER": "test02c-${NOMAD_ALLOC_ID}",
+            "DB_HOSTNAME": "testdb",
+            "DB_CONTAINER": "testdb-${NOMAD_ALLOC_ID}",
+            "DB_PW": "nimda"            
+          },
+          "Name": "connectnet",
+          "Resources": {
+                "CPU": 500,
+                "MemoryMB": 128,
+                "Networks": [
+                  {
+                    "Mode": "bridge"
+                  }
+                ]
+              }
+          },          
+          {
+          "Config": {
+            "image": "dpage/pgadmin4",
+            "hostname": "testnet-pgadmin",
+            "network_mode": "bridge",
+            "port_map": [
+              {
+                "pgaport": "80"
+              }
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "SERVICE_NAME": "testnet-pgadmin",
+            "PGADMIN_DEFAULT_PASSWORD": "nimda",
+            "PGADMIN_DEFAULT_EMAIL": "no@mail.com",
+            "SERVICE_TAGS": "postgres,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true"
+          },
+          "Name": "testnet-pgadmin",
+          "Resources": {
+            "CPU": 500,
+            "MemoryMB": 512,
+            "Networks": [
+              {
+                "DynamicPorts": [
+                  {
+                    "Label": "pgaport"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "Type": "service"
+}

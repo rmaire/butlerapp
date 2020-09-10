@@ -1,0 +1,6 @@
+spring:
+  cloud:
+    consul:
+      host: throwaway.ch
+      port: 8500
+      enabled: false

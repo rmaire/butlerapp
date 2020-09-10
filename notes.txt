@@ -1,0 +1,8 @@
+docker ps -a --filter "status=running" --format "{{.ID}}|{{.Image}}|{{.Status}}|{{.Ports}}|{{.Names}}|{{.Labels}}|{{.Networks}}"
+
+status 	One of created, restarting, running, removing, paused, exited, or dead
+
+
+./npm install @vue/cli --scripts-prepend-node-path
+
+export PATH=$PATH:$(pwd)/bin:PATH:$(pwd)/node

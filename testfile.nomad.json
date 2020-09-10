@@ -1,0 +1,167 @@
+{
+  "Datacenters": [
+    "dc1"
+  ],
+  "ID": "testnet",
+  "Name": "testnet",
+  "TaskGroups": [
+    {
+      "Count": 1,
+      "Name": "testnetgrp",
+      "Tasks": [
+        {
+          "Config": {
+            "image": "zuara/jira:8.5.1",
+            "hostname": "test01j",
+            "network_mode": "bridge",
+            "port_map": [
+              {
+                "atlasport": 8080
+              }
+            ],
+            "volumes": [
+              "/var/glusterclient/testnet/test01j:/var/atlassian/jira"
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "X_PROXY_NAME": "test01j.uprisesoft.ch",
+            "X_PROXY_PORT": "443",
+            "X_PROXY_SCHEME": "https",
+            "X_MINIMUM_MEMORY": "1024m",
+            "X_MAXIMUM_MEMORY": "2048m",
+            "SERVICE_TAGS": "jira,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true",
+            "SERVICE_NAME": "test01j"
+          },
+          "Name": "test01j",
+          "Resources": {
+            "CPU": 5000,
+            "MemoryMB": 3072,
+            "Networks": [
+              {
+                "DynamicPorts": [
+                  {
+                    "Label": "atlasport"
+                  }
+                ]
+              }
+            ]
+          },
+          "Services": [
+            {
+              "AddressMode": "auto",
+              "Name": "test01j",
+              "PortLabel": "atlasport",
+              "Tags": [
+                "jira",
+                "traefik.enable=true",
+                "traefik.frontend.entryPoints=https",
+                "traefik.frontend.passHostHeader=true"
+              ]
+            }
+          ]
+        },
+        {
+          "Config": {
+            "image": "zuara/confluence:7.1.0",
+            "hostname": "test01c",
+            "network_mode": "bridge",
+            "port_map": [
+              {
+                "atlasport": 8090
+              }
+            ],
+            "volumes": [
+              "/var/glusterclient/testnet/test01c:/var/atlassian/jira"
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "X_PROXY_NAME": "test01c.uprisesoft.ch",
+            "X_PROXY_PORT": "443",
+            "X_PROXY_SCHEME": "https",
+            "X_MINIMUM_MEMORY": "1024m",
+            "X_MAXIMUM_MEMORY": "2048m",
+            "SERVICE_TAGS": "confluence,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true",
+            "SERVICE_NAME": "test01c"
+          },
+          "Name": "test01c",
+          "Resources": {
+            "CPU": 5000,
+            "MemoryMB": 3072,
+            "Networks": [
+              {
+                "DynamicPorts": [
+                  {
+                    "Label": "atlasport"
+                  }
+                ]
+              }
+            ]
+          },
+          "Services": [
+            {
+              "AddressMode": "auto",
+              "Name": "test01c",
+              "PortLabel": "atlasport",
+              "Tags": [
+                "confluence",
+                "traefik.enable=true",
+                "traefik.frontend.entryPoints=https",
+                "traefik.frontend.passHostHeader=true"
+              ]
+            }
+          ]
+        },
+        {
+          "Config": {
+            "image": "postgres:9.5.19",
+            "hostname": "testdb",
+            "network_mode": "bridge",
+            "volumes": [
+              "/var/glusterclient/testnet/testdb:/var/lib/postgresql/data"
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "SERVICE_NAME": "testdb",
+            "POSTGRES_PASSWORD": "nimda",
+            "SERVICE_TAGS": "postgres"
+          },
+          "Name": "testdb",
+          "Resources": {
+            "CPU": 1000,
+            "MemoryMB": 1024
+          }
+        },
+        {
+          "Config": {
+            "command": "/usr/local/bin/atlasbundle2"
+          },
+          "Driver": "raw_exec",
+          "Env": {
+            "BUNDLE_NAME": "testnet",
+            "JIRA_1_HOSTNAME": "test01j",
+            "JIRA_1_CONTAINER": "test01j-${NOMAD_ALLOC_ID}",
+            "CONFLUENCE_2_HOSTNAME": "test01c",
+            "CONFLUENCE_2_CONTAINER": "test01c-${NOMAD_ALLOC_ID}",
+            "DB_HOSTNAME": "testdb",
+            "DB_CONTAINER": "testdb-${NOMAD_ALLOC_ID}",
+            "DB_PW": "nimda"            
+          },
+          "Name": "connectnet",
+          "Resources": {
+            "CPU": 500,
+            "MemoryMB": 128,
+            "Networks": [
+              {
+                "Mode": "bridge"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "Type": "service"
+}

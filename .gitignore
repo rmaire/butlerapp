@@ -1,0 +1,10 @@
+target
+/doc/
+.DS_Store
+.vagrant
+.mvn
+node
+node_modules
+package-lock.json
+*.jar
+/butlerapp/nbproject/

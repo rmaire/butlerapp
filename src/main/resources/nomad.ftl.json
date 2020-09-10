@@ -1,0 +1,151 @@
+{
+  "Datacenters": [
+    "dc1"
+  ],
+  "ID": "${name}",
+  "Name": "${name}",
+  "TaskGroups": [
+    {
+      "Count": 1,
+      "Name": "${name}grp",
+      "Tasks": [
+      <#list products as product>
+        {
+          "Config": {
+            "image": "${product.image}",
+            "hostname": "${product.hostname}",
+            "network_mode": "bridge",
+            "port_map": [
+              {
+                "atlasport": ${product.port}
+              }
+            ],
+            "volumes": [
+              "/var/glusterclient/${name}/${product.hostname}:/var/atlassian/jira"
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "X_PROXY_NAME": "${product.hostname}.${domain}",
+            "X_PROXY_PORT": "443",
+            "X_PROXY_SCHEME": "https",
+            "X_MINIMUM_MEMORY": "${product.minMemory}m",
+            "X_MAXIMUM_MEMORY": "${product.maxMemory}m",
+            "SERVICE_TAGS": "${product.type},traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true",
+            "SERVICE_NAME": "${product.hostname}"
+          },
+          "Name": "${product.hostname}",
+          "Resources": {
+            "CPU": ${product.cpu},
+            "MemoryMB": ${(product.maxMemory * 1.5)?ceiling},
+            "Networks": [
+              {
+                "DynamicPorts": [
+                  {
+                    "Label": "atlasport"
+                  }
+                ]
+              }
+            ]
+          },
+          "Services": [
+            {
+              "AddressMode": "auto",
+              "Name": "${product.hostname}",
+              "PortLabel": "atlasport",
+              "Tags": [
+                "${product.type}",
+                "traefik.enable=true",
+                "traefik.frontend.entryPoints=https",
+                "traefik.frontend.passHostHeader=true"
+              ]
+            }
+          ]
+        },
+        </#list>
+        {
+          "Config": {
+            "image": "postgres:9.5.19",
+            "hostname": "${database.hostname}",
+            "network_mode": "bridge",
+            "volumes": [
+              "/var/glusterclient/${name}/${database.hostname}:/var/lib/postgresql/data"
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "SERVICE_NAME": "${database.hostname}",
+            "POSTGRES_PASSWORD": "${database.password}",
+            "SERVICE_TAGS": "postgres"
+          },
+          "Name": "${database.hostname}",
+          "Resources": {
+            "CPU": 500,
+            "MemoryMB": 512
+          }
+        },
+        {
+          "Config": {
+            "command": "java",
+            "args": ["-jar", "/usr/local/bin/butler.jar", "--setup"]
+          },
+          "Driver": "raw_exec",
+          "Env": {
+            "BUNDLE_NAME": "${name}",
+            <#list products as product>
+            "${product.type?upper_case}_${product?index+1}_HOSTNAME": "${product.hostname}",
+            "${product.type?upper_case}_${product?index+1}_CONTAINER": "${product.hostname}-${r"${NOMAD_ALLOC_ID}"}",
+            </#list>
+            "DB_HOSTNAME": "${database.hostname}",
+            "DB_CONTAINER": "${database.hostname}-${r"${NOMAD_ALLOC_ID}"}",
+            "DB_PW": "${database.password}"            
+          },
+          "Name": "connectnet",
+          "Resources": {
+                "CPU": 500,
+                "MemoryMB": 128,
+                "Networks": [
+                  {
+                    "Mode": "bridge"
+                  }
+                ]
+              }
+          },          
+          {
+          "Config": {
+            "image": "dpage/pgadmin4",
+            "hostname": "${name}-pgadmin",
+            "network_mode": "bridge",
+            "port_map": [
+              {
+                "pgaport": "80"
+              }
+            ]
+          },
+          "Driver": "docker",
+          "Env": {
+            "SERVICE_NAME": "${name}-pgadmin",
+            "PGADMIN_DEFAULT_PASSWORD": "${database.password}",
+            "PGADMIN_DEFAULT_EMAIL": "no@mail.com",
+            "SERVICE_TAGS": "postgres,traefik.enable=true,traefik.frontend.entryPoints=https,traefik.frontend.passHostHeader=true"
+          },
+          "Name": "${name}-pgadmin",
+          "Resources": {
+            "CPU": 500,
+            "MemoryMB": 512,
+            "Networks": [
+              {
+                "DynamicPorts": [
+                  {
+                    "Label": "pgaport"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "Type": "service"
+}

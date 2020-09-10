@@ -1,0 +1,27 @@
+{
+    "elements": {
+        "style": {},
+        "another-component": {},
+        "my-component": {}
+    },
+    "attributes": {
+        "v-bind:title": {
+            "context": "span"
+        },
+        "v-bind:value": {
+            "context": "input"
+        },
+        "v-if": {
+            "context": "span"
+        },
+        "v-on:click": {
+            "context": "button"
+        },
+        "v-for": {
+            "context": "li"
+        },
+        "v-model": {
+            "context": "input"
+        }
+    }
+}
